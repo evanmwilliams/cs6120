@@ -11,7 +11,6 @@ std::unordered_set<std::string> find_used_variables(json const &prog) {
   for (const auto &func : prog["functions"]) {
     // Loop through all instructions in each function
     for (const auto &instr : func["instrs"]) {
-      // Check if the operation is 'add'
       if (!instr.contains("args"))
         continue;
       used.insert(instr["args"].begin(), instr["args"].end());
