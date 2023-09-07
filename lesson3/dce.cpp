@@ -111,9 +111,8 @@ void global_dce(json& prog){
 int main(int argc, char *argv[]) {
   // Parse the JSON string into a json object
   json prog = cli_parse_program(argc, argv);
-  std::cout << "success" << std::endl;
 
-  if(std::strcmp(argv[1], "-g") == 0){
+  if(argc > 1 && std::strcmp(argv[1], "-g") == 0){
     global_dce(prog);
   } else {
     local_dce(prog);
