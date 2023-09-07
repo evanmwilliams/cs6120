@@ -6,9 +6,14 @@
 #include <string>
 #include <tuple>
 #include <unordered_map>
+#include "../util/parse_program.hpp"
 
 using json = nlohmann::json;
 using instruction = json;
+
+std::string remove_quotes(const std::string& s){
+  return s.substr(1, s.length() - 2);
+}
 
 json make_lvn_val(json instr,
                   std::vector<std::pair<json, std::string>> const &num2val,
@@ -30,7 +35,8 @@ json make_lvn_val(json instr,
     std::vector<int> canonical_args;
     for (json const &arg : instr["args"])
     {
-      canonical_args.push_back(var2num.at(arg.dump()));
+      std::cout << "ARG: " << remove_quotes(arg.dump()) << std::endl;
+      canonical_args.push_back(var2num.at(remove_quotes(arg.dump())));
     }
     sort(canonical_args.begin(), canonical_args.end());
     canonical_val["args"] = canonical_args;
@@ -54,6 +60,7 @@ int find_val(json instr_as_lvn_val,
 
 void lvn(json const &program)
 {
+  std::cout << "FINDING BLOCKS EXT" << std::endl;
   std::vector<std::vector<instruction>> basic_blocks = find_blocks(program);
 
   for (auto block : basic_blocks)
@@ -92,23 +99,7 @@ void lvn(json const &program)
 
 int main(int argc, char *argv[])
 {
-  // Check if the filename is provided as a command-line argument
-  if (argc < 2)
-  {
-    std::cerr << "Usage: " << argv[0] << " <filename>" << std::endl;
-    return 1;
-  }
-
-  // Read the filename from command-line argument
-  std::string filename = argv[1];
-
-  // Read the JSON file into a std::string
-  std::ifstream ifs(filename);
-  std::string json_str((std::istreambuf_iterator<char>(ifs)),
-                       std::istreambuf_iterator<char>());
-
-  // Parse the JSON string into a json object
-  auto j = json::parse(json_str);
+  auto j = cli_parse_program(argc, argv);
 
   lvn(j);
 

@@ -22,9 +22,22 @@ std::vector<std::vector<instruction>> find_blocks(json const &program) {
         basic_blocks.push_back(current_block);
         current_block.clear();
         current_block.push_back(instr);
+
       } else {
         current_block.push_back(instr);
       }
+    }
+  }
+  if(current_block.size() > 0){
+    basic_blocks.push_back(current_block);
+  }
+  
+  std::cout << "blocks" << std::endl;
+
+  for(auto& block : basic_blocks){
+    std::cout << "NEW BLOCK: " << std::endl;
+    for(auto& insn: block){
+      std::cout << "\t" << insn << std::endl;
     }
   }
 
