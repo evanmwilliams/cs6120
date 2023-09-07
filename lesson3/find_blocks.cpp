@@ -7,39 +7,55 @@
 using json = nlohmann::json;
 using instruction = json;
 
-std::vector<std::vector<instruction>> find_blocks(json const &program) {
-  std::vector<std::vector<instruction>> basic_blocks;
-  std::vector<instruction> current_block;
+class BasicBlock {
+public:
+  std::vector<json> instructions;
+  BasicBlock() = default;
+  void addInstr(const json& insn){
+    instructions.push_back(insn);
+  }
 
-  for (auto const &func : program["functions"]) {
-    for (auto const &instr : func["instrs"]) {
-      std::string op = instr["op"];
-      if (op == "jmp" or op == "br") {
-        current_block.push_back(instr);
-        basic_blocks.push_back(current_block);
-        current_block.clear();
-      } else if (instr.contains("label")) {
-        basic_blocks.push_back(current_block);
-        current_block.clear();
-        current_block.push_back(instr);
+  size_t size(){
+    return instructions.size();
+  }
 
-      } else {
-        current_block.push_back(instr);
-      }
+  void clear(){
+    instructions.clear();
+  }
+  
+};
+
+std::vector<BasicBlock> find_blocks(json const &func) {
+  std::vector<BasicBlock> basic_blocks;
+  BasicBlock current_block;
+
+  for (auto const &instr : func["instrs"]) {
+    std::string op = instr["op"];
+    if (op == "jmp" or op == "br") {
+      current_block.addInstr(instr);
+      basic_blocks.push_back(current_block);
+      current_block.clear();
+    } else if (instr.contains("label")) {
+      basic_blocks.push_back(current_block);
+      current_block.clear();
+      current_block.addInstr(instr);
+    } else {
+      current_block.addInstr(instr);
     }
   }
+  
   if(current_block.size() > 0){
     basic_blocks.push_back(current_block);
   }
   
-  std::cout << "blocks" << std::endl;
+  /*std::cout << "blocks" << std::endl;
 
   for(auto& block : basic_blocks){
     std::cout << "NEW BLOCK: " << std::endl;
     for(auto& insn: block){
       std::cout << "\t" << insn << std::endl;
     }
-  }
+  }*/
 
   return basic_blocks;
 }

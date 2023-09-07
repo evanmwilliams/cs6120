@@ -3,6 +3,9 @@
 #include <nlohmann/json.hpp>
 #include <string>
 #include <unordered_set>
+#include "../util/parse_program.hpp"
+#include "find_blocks.cpp"
+
 
 using json = nlohmann::json;
 
@@ -15,6 +18,16 @@ std::unordered_set<std::string> find_used_variables(json const &prog) {
         continue;
       used.insert(instr["args"].begin(), instr["args"].end());
     }
+  }
+  return used;
+}
+
+std::unordered_set<std::string> find_used_variables(BasicBlock const &bb) {
+  std::unordered_set<std::string> used;
+  for (const auto &instr : bb.instructions) {
+      if (!instr.contains("args"))
+        continue;
+      used.insert(instr["args"].begin(), instr["args"].end());
   }
   return used;
 }
@@ -37,28 +50,55 @@ int erase_unused_variables(json &prog,
   return erased_insns;
 }
 
-int main(int argc, char *argv[]) {
-  // Check if the filename is provided as a command-line argument
-  std::string json_str;
-  if (argc < 2) {
-    std::string line;
-    while (std::getline(std::cin, line)) {
-      json_str += line;
+// can totally template this function
+int erase_unused_variables(BasicBlock &bb,
+                           std::unordered_set<std::string> const &used) {
+  int erased_insns = 0;
+  auto& instructions = bb.instructions;
+    // Loop through all instructions in each function
+  for (auto instr = instructions.begin(); instr != instructions.end();) {
+    json insn = *instr;
+    if (insn.contains("dest") && used.find(insn["dest"]) == used.end()) {
+      instr = instructions.erase(instr);
+      erased_insns++;
+    } else {
+      instr++;
     }
-  } else {
-    // Read the filename from command-line argument
-    std::string filename = argv[1];
+  }
+  return erased_insns;
+}
 
-    // Read the JSON file into a std::string
-    std::ifstream ifs(filename);
-    json_str = std::string((std::istreambuf_iterator<char>(ifs)),
-                           std::istreambuf_iterator<char>());
+
+void local_dce(const json& prog){
+  json new_prog;
+  new_prog["functions"] = json::array();
+
+  for (auto const &func : prog["functions"]) {
+    json curr_function;
+    curr_function["name"] = func["name"];
+    curr_function["instrs"] = json::array();
+
+    std::vector<BasicBlock> basic_blocks = find_blocks(func);
+    for(auto& bb : basic_blocks){
+      int erased_insns = 1;
+      while (erased_insns != 0) {
+        std::unordered_set<std::string> used = find_used_variables(bb);
+        erased_insns = erase_unused_variables(bb, used);
+      }
+    }
+
+    for(auto const& bb : basic_blocks){
+      for(auto const& insn : bb.instructions){
+        curr_function["instrs"].push_back(insn);
+      }
+    }
+    new_prog["functions"].push_back(curr_function);
   }
 
-  // Parse the JSON string into a json object
-  json prog = json::parse(json_str);
+  std::cout << new_prog << std::endl;
+}
 
-  // Initialize the count of add instructions to zero
+void global_dce(json& prog){
   int erased_insns = 1;
   while (erased_insns != 0) {
     std::unordered_set<std::string> used = find_used_variables(prog);
@@ -66,6 +106,18 @@ int main(int argc, char *argv[]) {
   }
 
   std::cout << prog << std::endl;
+}
+
+int main(int argc, char *argv[]) {
+  // Parse the JSON string into a json object
+  json prog = cli_parse_program(argc, argv);
+  std::cout << "success" << std::endl;
+
+  if(std::strcmp(argv[1], "-g") == 0){
+    global_dce(prog);
+  } else {
+    local_dce(prog);
+  }
 
   return 0;
 }
