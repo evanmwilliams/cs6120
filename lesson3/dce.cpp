@@ -12,6 +12,8 @@ std::unordered_set<std::string> find_used_variables(json const &prog) {
     // Loop through all instructions in each function
     for (const auto &instr : func["instrs"]) {
       // Check if the operation is 'add'
+      if (!instr.contains("args"))
+        continue;
       used.insert(instr["args"].begin(), instr["args"].end());
     }
   }
@@ -24,7 +26,6 @@ int erase_unused_variables(json &prog,
   for (auto &func : prog["functions"]) {
     // Loop through all instructions in each function
     for (auto instr = func["instrs"].begin(); instr != func["instrs"].end();) {
-      // Check if the operation is 'add'
       json insn = *instr;
       if (insn.contains("dest") && used.find(insn["dest"]) == used.end()) {
         instr = func["instrs"].erase(instr);
