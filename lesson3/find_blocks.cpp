@@ -30,8 +30,7 @@ std::vector<BasicBlock> find_blocks(json const &func) {
   BasicBlock current_block;
 
   for (auto const &instr : func["instrs"]) {
-    std::string op = instr["op"];
-    if (op == "jmp" or op == "br") {
+    if (instr.contains("op") and (instr["op"] == "jmp" or instr["op"] == "br")) {
       current_block.addInstr(instr);
       basic_blocks.push_back(current_block);
       current_block.clear();

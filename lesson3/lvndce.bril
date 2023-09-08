@@ -4,6 +4,7 @@
   
   sum1: int = add v0 v1;
   sum2: int = add v0 v1;
+  v1: int = const 5;
 
   print sum2;
 }

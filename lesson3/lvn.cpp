@@ -13,6 +13,7 @@ using instruction = json;
 
 std::string remove_quotes(const std::string &s)
 {
+  auto str = s.substr(1, s.length() - 2);
   return s.substr(1, s.length() - 2);
 }
 
@@ -47,7 +48,8 @@ json mangle_args(json const &arg_list, std::string &name)
 
 json make_lvn_val(json instr,
                   std::vector<std::pair<json, std::string>> const &idx_value_name,
-                  std::unordered_map<std::string, int> const &variable_index)
+                  std::unordered_map<std::string, int> const &variable_index,
+                  std::unordered_map<std::string, std::string> const &var2mangled_name)
 {
   std::string op = instr["op"];
   json canonical_val;
@@ -70,7 +72,19 @@ json make_lvn_val(json instr,
     std::vector<int> canonical_args;
     for (json const &arg : instr["args"])
     {
-      canonical_args.push_back(variable_index.at(remove_quotes(arg.dump())));
+      
+      std::string var = remove_quotes(arg.dump());
+
+      // if this name was mangled, get the mangled one
+      if(var2mangled_name.count(var) > 0){
+        var = var2mangled_name.at(var);
+      }
+
+      try {
+        canonical_args.push_back(variable_index.at(var));
+      } catch(std::exception& e){
+        //std::cout << e.what() << " KEY: " << arg << std::endl;
+      }
     }
     sort(canonical_args.begin(), canonical_args.end());
     canonical_val["args"] = canonical_args;
@@ -92,6 +106,23 @@ int find_val(json instr_as_lvn_val,
   return -1; // not found
 }
 
+std::unordered_map<std::string, int> get_def_count(json const& func){
+  std::unordered_map<std::string, int> def_count;
+
+  for(json const& func_args : func["args"]){
+    def_count[remove_quotes(func_args["name"])]++;
+  }
+
+  for(json const& instr : func["instrs"]){
+    if (!instr.contains("dest")) {
+      continue;
+    }
+
+    def_count[remove_quotes(instr["dest"].dump())]++;
+  }
+  return def_count;
+}
+
 json lvn(const json &program)
 {
   json lvn_program;
@@ -99,65 +130,35 @@ json lvn(const json &program)
 
   for (auto const &func : program["functions"])
   {
+    std::unordered_map<std::string, int> var_def_count = get_def_count(func);
+    std::unordered_map<std::string, std::string> var_to_curr_mangled;
+
     json curr_function;
     curr_function["name"] = func["name"];
+    curr_function["args"] = func["args"];
     curr_function["instrs"] = json::array();
     std::vector<BasicBlock> basic_blocks = find_blocks(func);
+    //std::cout << "BASIC BLOCKs FOUND" << std::endl;
+
+    std::unordered_map<std::string, int> variable_index;      // x -> 0
+    std::vector<std::pair<json, std::string>> idx_value_name; // idx: 0, ({const 4}, x)
+
+    for(const json& arg : func["args"]){
+        json arg_json;
+        arg_json["op"] = "id";
+        arg_json["args"] = json::array({arg["name"]});
+        idx_value_name.push_back({arg_json, arg["name"]});
+        //std::cout << "ADDING ARG: " << arg["name"] << std::endl;
+        variable_index[arg["name"]] = idx_value_name.size()-1;
+    }
 
     for (BasicBlock &block : basic_blocks)
     {
-      std::unordered_map<std::string, int> variable_index;      // x -> 0
-      std::vector<std::pair<json, std::string>> idx_value_name; // idx: 0, ({const 4}, x)
-      std::vector<std::pair<int, int>> instr2defs;
-      for (int i = 0; i < block.instructions.size(); i++)
-      {
-        std::string op = block.instructions[i]["op"];
 
-        try
-        {
-          std::string dest = block.instructions[i].at("dest");
-          for (int j = i + 1; j < block.instructions.size(); j++)
-          {
-            try
-            {
-              std::string dest2 = block.instructions[j].at("dest");
-              if (dest == dest2)
-              {
-                instr2defs.push_back({i, j});
-              }
-            }
-            catch (const std::exception &e)
-            {
-              continue;
-            }
-          }
-        }
-        catch (const std::out_of_range &e)
-        {
-          continue;
-        }
-      }
-
-      for (auto defs : instr2defs)
-      {
-        block.instructions[defs.first]["dest"] = nlohmann::json(std::string("_") + block.instructions[defs.first]["dest"].dump());
-        std::string dest_name = block.instructions[defs.first]["dest"].dump();
-        for (int i = defs.first + 1; i < defs.second; i++)
-        {
-          try
-          {
-            block.instructions[i]["args"] = mangle_args(block.instructions[defs.first]["args"], dest_name);
-          }
-          catch (const std::out_of_range &e)
-          {
-            continue;
-          }
-        }
-      }
       for (auto instr : block.instructions)
       {
-        std::string op = instr["op"];
-
+        //std::cout << "INSTRUCTION: " << instr << std::endl;
+        std::string op = instr.contains("op") ? instr["op"] : "label";
         if (op == "print")
         {
           std::string print_arg = remove_quotes(instr["args"][0].dump());
@@ -165,19 +166,28 @@ json lvn(const json &program)
           curr_function["instrs"].push_back(instr);
           continue;
         }
-        else if (op == "jump" or op == "call")
+        else if (op == "ret" or op == "jmp" or op == "call" or op == "label" or op == "br")
         {
           curr_function["instrs"].push_back(instr);
           continue;
         }
 
-        json lvn_ify_instr = make_lvn_val(instr, idx_value_name, variable_index);
+        json lvn_ify_instr = make_lvn_val(instr, idx_value_name, variable_index, var_to_curr_mangled);
+
         int value_number = find_val(lvn_ify_instr, idx_value_name);
 
         // value not in the table
         if (value_number == -1)
         {
-          // give this instr a fresh value number
+          std::string dest = remove_quotes(instr["dest"].dump());
+
+          if(var_def_count[dest] > 1){
+            var_def_count[dest]--;
+            std::string mangled = std::string(var_def_count[dest], '_') + dest; // 5*'_' + dest
+            var_to_curr_mangled[dest] = mangled;
+            instr["dest"] = mangled;
+          }
+          
           idx_value_name.push_back({lvn_ify_instr, instr["dest"]});
           variable_index[instr["dest"]] = idx_value_name.size() - 1;
           if (instr.contains("args"))
@@ -191,7 +201,6 @@ json lvn(const json &program)
           auto &[instr_val, canonical_name] = idx_value_name[value_number];
           instr["op"] = "id";
           instr["args"] = json::array({canonical_name});
-          // std::cout << "MODIFIED INSN: " << instr << std::endl;
         }
         curr_function["instrs"].push_back(instr);
       }
