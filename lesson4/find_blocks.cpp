@@ -36,6 +36,10 @@ public:
 
   bool isTerminal() const
   {
+    if (instructions.size() == 0)
+    {
+      return false;
+    }
     auto instr = getLastInstruction();
     return instr.contains("op") and (instr["op"] == "jmp" or instr["op"] == "br");
   }
