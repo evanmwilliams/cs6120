@@ -1,3 +1,4 @@
+#pragma once
 #include <fstream>
 #include <iostream>
 #include <nlohmann/json.hpp>
@@ -5,6 +6,11 @@
 #include <unordered_set>
 
 using json = nlohmann::json;
+
+std::string remove_quotes(const std::string &s) {
+  auto str = s.substr(1, s.length() - 2);
+  return s.substr(1, s.length() - 2);
+}
 
 json cli_parse_program(int argc, char *argv[]) {
   // Check if the filename is provided as a command-line argument
@@ -25,7 +31,7 @@ json cli_parse_program(int argc, char *argv[]) {
     std::ifstream ifs(filename);
     json_str = std::string((std::istreambuf_iterator<char>(ifs)),
                            std::istreambuf_iterator<char>());
-  } 
+  }
 
   // Parse the JSON string into a json object
   return json::parse(json_str);

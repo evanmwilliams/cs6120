@@ -9,75 +9,56 @@
 using json = nlohmann::json;
 using instruction = json;
 
-class BasicBlock
-{
+class BasicBlock {
 public:
   std::vector<json> instructions;
+  std::vector<json> args;
   BasicBlock() = default;
-  void addInstr(const json &insn)
-  {
-    instructions.push_back(insn);
-  }
+  void addInstr(const json &insn) { instructions.push_back(insn); }
 
-  size_t size()
-  {
-    return instructions.size();
-  }
+  size_t size() { return instructions.size(); }
 
-  void clear()
-  {
-    instructions.clear();
-  }
+  void clear() { instructions.clear(); }
 
-  instruction getLastInstruction() const
-  {
+  instruction getLastInstruction() const {
     return instructions[instructions.size() - 1];
   }
 
-  bool isTerminal() const
-  {
-    if (instructions.size() == 0)
-    {
+  bool isTerminal() const {
+    if (instructions.size() == 0) {
       return false;
     }
     auto instr = getLastInstruction();
-    return instr.contains("op") and (instr["op"] == "jmp" or instr["op"] == "br");
+    return instr.contains("op") and
+           (instr["op"] == "jmp" or instr["op"] == "br" or
+            instr["op"] == "ret");
   }
 
-  bool hasLabel(std::string label) const
-  {
-    for (auto &instr : instructions)
-    {
-      if (instr.contains("label") and instr["label"] == label)
-      {
+  bool hasLabel(std::string label) const {
+    for (auto &instr : instructions) {
+      if (instr.contains("label") and instr["label"] == label) {
         return true;
       }
     }
     return false;
   }
 
-  std::unordered_set<std::string> getDefs()
-  {
+  std::unordered_set<std::string> getDefs() {
     std::unordered_set<std::string> defs;
-    for (auto &instr : instructions)
-    {
-      if (instr.contains("dest"))
-      {
+    for (auto &instr : instructions) {
+      if (instr.contains("dest")) {
         defs.insert(instr["dest"]);
       }
     }
     return defs;
   }
 
-  std::unordered_set<std::string> getKills()
-  {
+  std::unordered_set<std::string> getKills() {
     std::unordered_set<std::string> kills;
     std::unordered_set<std::string> seen;
 
-    for (auto it = instructions.rbegin(); it != instructions.rend(); it++)
-    {
-      if (it->contains("dest") && seen.find((*it)["dest"]) == seen.end())
-      {
+    for (auto it = instructions.rbegin(); it != instructions.rend(); it++) {
+      if (it->contains("dest") && seen.find((*it)["dest"]) == seen.end()) {
         kills.insert((*it)["dest"]);
         seen.insert((*it)["dest"]);
       }
@@ -87,33 +68,28 @@ public:
   }
 };
 
-std::vector<BasicBlock> find_blocks(json const &func)
-{
+std::vector<BasicBlock> find_blocks(json const &func) {
   std::vector<BasicBlock> basic_blocks;
   BasicBlock current_block;
 
-  for (auto const &instr : func["instrs"])
-  {
-    if (instr.contains("op") and (instr["op"] == "jmp" or instr["op"] == "br"))
-    {
+  for (auto const &instr : func["instrs"]) {
+    if (instr.contains("op") and
+        (instr["op"] == "jmp" or instr["op"] == "br")) {
       current_block.addInstr(instr);
       basic_blocks.push_back(current_block);
       current_block.clear();
-    }
-    else if (instr.contains("label"))
-    {
-      basic_blocks.push_back(current_block);
+    } else if (instr.contains("label")) {
+      if (current_block.size() > 0) {
+        basic_blocks.push_back(current_block);
+      }
       current_block.clear();
       current_block.addInstr(instr);
-    }
-    else
-    {
+    } else {
       current_block.addInstr(instr);
     }
   }
 
-  if (current_block.size() > 0)
-  {
+  if (current_block.size() > 0) {
     basic_blocks.push_back(current_block);
   }
 

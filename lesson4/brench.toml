@@ -10,7 +10,5 @@ pipeline = [
 [runs.myopt]
 pipeline = [
     "bril2json",
-    "./lvn",
-    "./dce",
-    "brili -p {args}",
+    "./reachingdefs"
 ]

@@ -1,0 +1,12 @@
+@main {
+  a: int = const 4; 
+  b: int = const 2; 
+  eq: bool = eq a b;
+  br eq .printa .printb;
+.printa:
+  print a;
+  ret;
+.printb:
+  print b;
+  ret;
+}
