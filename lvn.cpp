@@ -7,7 +7,7 @@
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
-#include "../util/parse_program.hpp"
+#include "util/parse_program.hpp"
 
 using json = nlohmann::json;
 using instruction = json;

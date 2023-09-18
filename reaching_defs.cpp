@@ -1,11 +1,13 @@
-#include "find_blocks.cpp"
-#include "cfg.cpp"
+// #include "find_blocks.cpp"
+// #include "cfg.cpp"
+#include "BasicBlocks.hpp"
+#include "CFG.hpp"
 #include <unordered_set>
 #include <queue>
 #include <vector>
 #include <stdlib.h>
 #include <iostream>
-#include "../util/parse_program.hpp"
+#include "util/parse_program.hpp"
 
 using json = nlohmann::json;
 using instruction = json;
@@ -77,7 +79,7 @@ void reaching_definitions(CFG &cfg)
 
   for (int i = 0; i < cfg.blocks.size(); i++)
   {
-    std::cout << "BLOCK " << i << std::endl;
+    std::cout << "BLOCK: " << i << std::endl;
     std::cout << "IN: ";
     for (auto in_var : in[cfg.blocks[i]])
     {
@@ -100,7 +102,7 @@ int main(int argc, char *argv[])
   for (const json &func : prog["functions"])
   {
     std::cout << "FUNCTION: " << func["name"] << std::endl;
-    std::vector<BasicBlock> blocks = find_blocks(func);
+    std::vector<BasicBlock> blocks = find_basic_blocks(func);
     CFG cfg{blocks};
     reaching_definitions(cfg);
   }

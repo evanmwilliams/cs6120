@@ -13,21 +13,13 @@ class BasicBlock
 {
 public:
   std::vector<json> instructions;
+  std::vector<json> args;
   BasicBlock() = default;
-  void addInstr(const json &insn)
-  {
-    instructions.push_back(insn);
-  }
+  void addInstr(const json &insn) { instructions.push_back(insn); }
 
-  size_t size()
-  {
-    return instructions.size();
-  }
+  size_t size() { return instructions.size(); }
 
-  void clear()
-  {
-    instructions.clear();
-  }
+  void clear() { instructions.clear(); }
 
   instruction getLastInstruction() const
   {
@@ -36,8 +28,14 @@ public:
 
   bool isTerminal() const
   {
+    if (instructions.size() == 0)
+    {
+      return false;
+    }
     auto instr = getLastInstruction();
-    return instr.contains("op") and (instr["op"] == "jmp" or instr["op"] == "br");
+    return instr.contains("op") and
+           (instr["op"] == "jmp" or instr["op"] == "br" or
+            instr["op"] == "ret");
   }
 
   bool hasLabel(std::string label) const
@@ -90,7 +88,8 @@ std::vector<BasicBlock> find_blocks(json const &func)
 
   for (auto const &instr : func["instrs"])
   {
-    if (instr.contains("op") and (instr["op"] == "jmp" or instr["op"] == "br"))
+    if (instr.contains("op") and
+        (instr["op"] == "jmp" or instr["op"] == "br"))
     {
       current_block.addInstr(instr);
       basic_blocks.push_back(current_block);
@@ -98,7 +97,10 @@ std::vector<BasicBlock> find_blocks(json const &func)
     }
     else if (instr.contains("label"))
     {
-      basic_blocks.push_back(current_block);
+      if (current_block.size() > 0)
+      {
+        basic_blocks.push_back(current_block);
+      }
       current_block.clear();
       current_block.addInstr(instr);
     }
