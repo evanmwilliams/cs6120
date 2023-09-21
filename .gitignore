@@ -2,3 +2,6 @@
 **/CmakeFiles
 **/Makefile
 **/cmake_install.cmake
+**/dce
+**/lvn
+**/reachingdefs
