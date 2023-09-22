@@ -109,6 +109,7 @@ void dominanceFrontierHelper(BasicBlockDom& bb, boost::dynamic_bitset<>& visible
         }
 
         visible.set(bb.id);
+		std::cout << bb.id << " ";
     }
 }
 
@@ -122,13 +123,27 @@ void dominanceFrontier(std::vector<BasicBlockDom> &bbs) {
 int main(int argc, char *argv[]) {
   const json prog = cli_parse_program(argc, argv);
 
+  std::cout << "DOMINANCE TREE" << std::endl;
+
   for (const json &func : prog["functions"]) {
     std::vector<BasicBlockDom> bbs = find_blocks<BasicBlockDom>(func);
     CFGVisitor<BasicBlockDom> cfg = CFGVisitor<BasicBlockDom>(bbs);
     getDominators(bbs, cfg.getEntryBlock());
     dominanceTree(bbs);
+	std::cout << func["name"] << ":" << std::endl;
     domTreeGV(std::cout, bbs);
-    dominanceFrontier(bbs);
+    // dominanceFrontier(bbs);
+  }
+
+  std::cout << "DOMINANCE FRONTIER" << std::endl;
+
+  for (const json& func : prog["functions"]) {
+	std::vector<BasicBlockDom> bbs = find_blocks<BasicBlockDom>(func);
+    CFGVisitor<BasicBlockDom> cfg = CFGVisitor<BasicBlockDom>(bbs);
+    getDominators(bbs, cfg.getEntryBlock());
+    std::cout << func["name"] << ": ";
+	dominanceFrontier(bbs); 
+	std::cout << std::endl;
   }
 
   return 0;
