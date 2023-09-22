@@ -1,0 +1,25 @@
+@main {
+  jmp .A;
+  
+.A:
+  aVal: int = const 10;
+  zVal: int = const 0;
+  decision: bool = eq aVal zVal;
+  br decision .B .C;
+
+.B:
+  bVal: int = const 5;
+  jmp .D;
+
+.C:
+  cVal: int = const 20;
+  jmp .D;
+
+.D:
+  dVal: int = const 30;
+  jmp .E;
+
+.E:
+  eVal: int = const 40;
+  print eVal;
+}

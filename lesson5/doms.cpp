@@ -1,3 +1,4 @@
+#include <cstdlib>
 #include <deque>
 #include <iostream>
 #include <boost/dynamic_bitset.hpp>
@@ -182,5 +183,5 @@ int main(int argc, char *argv[])
     std::cout << std::endl;
   }
 
-  return 0;
+  return EXIT_SUCCESS;
 }
