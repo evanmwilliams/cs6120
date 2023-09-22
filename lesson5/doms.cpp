@@ -140,8 +140,11 @@ void dominanceFrontierHelper(BasicBlockDom &bb, boost::dynamic_bitset<> &visible
 void dominanceFrontier(std::vector<BasicBlockDom> &bbs)
 {
   // vis_.reset();
-  boost::dynamic_bitset<> visible(bbs.size());
-  dominanceFrontierHelper(bbs[0], visible);
+  for (auto &bb : bbs)
+  {
+    boost::dynamic_bitset<> visible(bbs.size());
+    dominanceFrontierHelper(bb, visible);
+  }
   // if (os_) cfg::printFnGV(bbs_, DfrontPrint(*os_, cu_, *this), fn_.name);
 }
 
@@ -174,6 +177,10 @@ int main(int argc, char *argv[])
     for (auto bb : bbs)
     {
       std::cout << bb.id << ": ";
+      if (bb.dfront.empty())
+      {
+        std::cout << "empty";
+      }
       for (auto df : bb.dfront)
       {
         std::cout << df->id << " ";
