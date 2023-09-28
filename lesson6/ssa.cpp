@@ -37,26 +37,34 @@ void insert_phi_nodes(std::vector<BasicBlockDom> &bbs, CFGVisitor<BasicBlockDom>
       for (auto &f : df)
       {
         // no phi node already
-        auto block = *f;
-        if (!block.instructions.empty() && (block.instructions[0].contains("op") && !block.instructions[0]["op"].contains("phi")))
+        bool has_phi = false;
+        for (auto instr : (*f).instructions)
+        {
+          if (instr.contains("op") and instr["op"] == "phi")
+          {
+            has_phi = true;
+            break;
+          }
+        }
+        if (!has_phi || !(*f).instructions[0].contains("op"))
         {
           json j;
           j["op"] = "phi";
           j["dest"] = var.first;
           std::vector<std::string> args;
-          for (auto &p : block.predecessors)
+          for (auto &p : (*f).predecessors)
           {
             args.push_back(var.first);
           }
           j["args"] = args;
-          block.instructions.push_back(j);
-          for (int i = block.instructions.size() - 1; i >= 1; i--)
+          (*f).instructions.push_back(j);
+          for (int i = (*f).instructions.size() - 1; i >= 1; i--)
           {
-            block.instructions[i] = block.instructions[i - 1];
+            (*f).instructions[i] = (*f).instructions[i - 1];
           }
-          block.instructions[0] = j;
+          (*f).instructions[0] = j;
         }
-        var.second.push_back(block);
+        var.second.push_back((*f));
       }
     }
   }
@@ -68,9 +76,17 @@ int main(int argc, char *argv[])
 
   for (const json &func : prog["functions"])
   {
+    std::cout << func["name"] << ":" << std::endl;
     std::vector<BasicBlockDom> bbs = find_blocks<BasicBlockDom>(func);
     CFGVisitor<BasicBlockDom> cfg = CFGVisitor<BasicBlockDom>(bbs);
     insert_phi_nodes(bbs, cfg);
+    for (auto bb : bbs)
+    {
+      for (auto instr : bb.instructions)
+      {
+        std::cout << instr << std::endl;
+      }
+    }
   }
 
   return EXIT_SUCCESS;
