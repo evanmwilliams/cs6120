@@ -79,13 +79,13 @@ void domTreeGV(std::ostream &os, std::vector<BasicBlockDom> &bbs)
   os << "label=";
   os << ("\"fn_name\"");
   os << ";\n";
-  for (auto &bb : bbs)
-  {
-    os << "\"bb.id\"";
-    os << " [label=\"";
-    os << bb.id;
-    os << "\"];\n";
-  }
+  // for (auto &bb : bbs)
+  // {
+  //   os << "\"bb.id\"";
+  //   os << " [label=\"";
+  //   os << bb.id;
+  //   os << "\"];\n";
+  // }
 
   for (auto &bb : bbs)
   {
