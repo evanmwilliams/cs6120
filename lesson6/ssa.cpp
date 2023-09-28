@@ -1,8 +1,8 @@
 #include <cstdlib>
 #include "../util/parse_program.hpp"
 #include "../util/find_blocks.cpp"
-#include "../util/cfg.cpp"
-#include "dominators.hpp"
+#include "../util/cfg.hpp"
+#include "dominators.cpp"
 #include <unordered_map>
 #include <nlohmann/json.hpp>
 

@@ -1,3 +1,4 @@
+#pragma once
 #include "find_blocks.cpp"
 #include <memory>
 
