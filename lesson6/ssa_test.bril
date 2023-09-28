@@ -1,0 +1,14 @@
+@main {
+  a: int = const 4; 
+  b: int = const 2; 
+  eq: bool = eq a b;
+  br eq .changea1 .changea2;
+.changea1:
+  a: int = const 5;
+  jmp .printa;
+.changea2:
+  a: int = const 6;
+  jmp .printa;
+.printa:
+  print a;
+}
