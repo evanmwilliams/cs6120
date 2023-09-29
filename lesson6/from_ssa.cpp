@@ -9,6 +9,23 @@
 
 using json = nlohmann::json;
 
+void interleavePhiBBs(std::vector<BasicBlockDom> &bbs, std::vector<BasicBlockDom> & new_phi_bbs){
+  for(auto& phi_bb : new_phi_bbs){
+    auto jmp_label = phi_bb.getLastInstruction()["labels"][0];
+    auto bb_itr = std::find_if(bbs.begin(), bbs.end(), [&jmp_label](auto& bb){
+      try {
+        auto label = bb.getLabel();
+      } catch (std::runtime_error& e){
+        return false;
+      }
+      return bb.getLabel() == jmp_label;
+    });
+    bbs.insert(bb_itr, phi_bb);
+  }
+
+}
+
+
 void fromSSA(const json &prog) {
   ProgramPrinter printer(std::cout);
 
@@ -25,16 +42,43 @@ void fromSSA(const json &prog) {
     for(auto bb_itr = bbs.begin(); bb_itr != bbs.end(); bb_itr++){
       auto& bb = *bb_itr;
       int newly_added_blocks = 0;
+      std::unordered_map<std::string, int> label_to_phi_bb;
       for(auto &instruction : bb.instructions){
+        // map of var to existing phi node block assignment predecessor
+
         if(instruction.contains("op") && instruction["op"] == "phi"){
           // insert new basic block
           auto dest = instruction["dest"];
           // for each of the phi args
           for(int i = 0; i < instruction["args"].size(); i++){
-            BasicBlockDom new_bb;
             //std::cout << "NEW BB TIME" <<std::endl;
             auto arg = instruction["args"][i];
             auto from_label = instruction["labels"][i];
+            // std::cout << "Looking for PHI BB for " << from_label << std::endl;
+
+            // // print out label_to_phi_bb
+            // for(auto &[label, bb] : label_to_phi_bb){
+            //   std::cout << label << " -> " << bb << std::endl;
+            // } 
+
+            if(label_to_phi_bb.count(from_label) > 0){
+              //std::cout << "Found a block to add to!" << std::endl;
+              json id_insn = {
+                {"dest", dest},
+                {"op", "id"},
+                {"args", json::array({arg})}
+              };
+              auto& phi_bb = new_phi_bbs[label_to_phi_bb[from_label]];
+              auto jmp = phi_bb.instructions.back();
+              phi_bb.instructions.pop_back();
+              phi_bb.instructions.push_back(id_insn);
+              phi_bb.instructions.push_back(jmp);
+              //swap last insn with jump
+              //std::cout << "Added to block " << from_label << std::endl;
+              continue;
+            }
+
+            BasicBlockDom new_bb;
             std::string new_bb_label = "_" + std::to_string(i) + remove_quotes(from_label.dump());
 
             json bb_label = {
@@ -74,6 +118,8 @@ void fromSSA(const json &prog) {
             }
 
             new_phi_bbs.push_back(new_bb);
+            label_to_phi_bb[from_label] = new_phi_bbs.size()-1;
+            
             //bb_itr = bbs.insert(bb_itr, new_bb);
             //newly_added_blocks++;
             //std::cout << "Finished a phi arg " << std::endl;
@@ -88,7 +134,8 @@ void fromSSA(const json &prog) {
 
     }
 
-    bbs.insert(bbs.end(), new_phi_bbs.begin(), new_phi_bbs.end());
+    interleavePhiBBs(bbs, new_phi_bbs);
+    //bbs.insert(bbs.end(), new_phi_bbs.begin(), new_phi_bbs.end());
     printer.printFunction(func, bbs);
   }
   printer.print();

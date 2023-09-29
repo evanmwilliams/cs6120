@@ -32,7 +32,6 @@ json cli_parse_program(int argc, char *argv[]) {
     json_str = std::string((std::istreambuf_iterator<char>(ifs)),
                            std::istreambuf_iterator<char>());
   }
-
   // Parse the JSON string into a json object
   return json::parse(json_str);
 }
