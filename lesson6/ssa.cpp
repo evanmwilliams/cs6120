@@ -100,12 +100,7 @@ void insert_phi_nodes(std::vector<BasicBlockDom> &bbs, CFGVisitor<BasicBlockDom>
 void rename(BasicBlockDom& bb, 
             std::unordered_map<std::string, std::stack<PhiVariable>> &variable_names){
   // rename step in SSA
-  std::unordered_map<std::string, int> var_to_newly_added;
-
-  // print out variable_names
-  //for(auto &[var, stack] : variable_names){
-  //  std::cout << var << " -> " << stack.top().toVariable() << std::endl;
-  //}
+  std::unordered_map<std::string, int> var_num_to_pop;
 
  // update also the DEST of the phi instructions:
   for(auto& phi : bb.phi_nodes){
@@ -116,10 +111,10 @@ void rename(BasicBlockDom& bb,
       variable_names[phi.dest].push({phi.dest, 0});
       PhiVariable::updateHighestVar(phi.dest, 0);
     }
-    var_to_newly_added[phi.dest]++;
+    var_num_to_pop[phi.dest]++;
     phi.dest = variable_names[phi.dest].top().toVariable();
   }
-  
+
   for(auto &instr : bb.instructions){
     if(instr.contains("args") && instr.contains("op") && instr["op"] != "phi"){
       for(auto &arg : instr["args"]){
@@ -142,7 +137,7 @@ void rename(BasicBlockDom& bb,
         variable_names[dest].push({dest, 0});
         PhiVariable::updateHighestVar(dest, 0);
       }
-      var_to_newly_added[dest]++;
+     var_num_to_pop[dest]++;
 
       instr["dest"] = variable_names[dest].top().toVariable();
     }
@@ -187,14 +182,13 @@ void rename(BasicBlockDom& bb,
   }
   //std::cout << "did dom succs " << std::endl;
   // pop all the names we just pushed onto the stack
-  for(auto &[var, num] : var_to_newly_added){
+  for(auto &[var, num] : var_num_to_pop){
     for(int i = 0; i < num; i++){
       //std::cout << var << " JUST POPPED " << std::endl;
 
       variable_names[var].pop();
     }
   }
-  //std::cout << "did popping " << std::endl;
 
 }
 
@@ -256,6 +250,7 @@ std::unordered_map<std::string, int> PhiVariable::highest_num;
 int main(int argc, char *argv[])
 {
   const json prog = cli_parse_program(argc, argv);
+
   toSSA(prog);
   
   return EXIT_SUCCESS;

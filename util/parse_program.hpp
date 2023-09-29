@@ -22,6 +22,10 @@ json cli_parse_program(int argc, char *argv[]) {
   if (!has_file) {
     std::string line;
     while (std::getline(std::cin, line)) {
+      // if line is a comment
+      if(line[0] == '#'){
+        continue;
+      }
       json_str += line;
     }
   } else {
