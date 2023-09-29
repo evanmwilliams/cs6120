@@ -20,6 +20,12 @@ public:
     }
     json instructions = json::array();
     for (auto &bb : bbs) {
+      json label{ {"label", bb.getLabel()} };
+      instructions.push_back(label);
+      for (auto &phi : bb.phi_nodes) {
+        instructions.push_back(phi.toInstruction());
+      }
+
       for (auto &instr : bb.instructions) {
         instructions.push_back(instr);
       }
