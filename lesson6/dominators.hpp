@@ -1,10 +1,11 @@
+#pragma once
 #include "dominators.hpp"
 #include <boost/dynamic_bitset.hpp>
 #include <cstdlib>
 #include <deque>
 #include <iostream>
 #include "../util/parse_program.hpp"
-#include "../util/find_blocks.cpp"
+#include "../util/find_blocks.hpp"
 #include "../util/cfg.hpp"
 
 void getDominators(std::vector<BasicBlockDom> &bbs, BasicBlockDom *entry)

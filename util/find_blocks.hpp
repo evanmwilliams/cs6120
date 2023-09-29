@@ -6,6 +6,7 @@
 #include <string>
 #include <unordered_set>
 #include <boost/dynamic_bitset.hpp>
+#include "parse_program.hpp"
 
 using json = nlohmann::json;
 using instruction = json;
@@ -23,6 +24,22 @@ public:
   void addInstr(const json &insn) { instructions.push_back(insn); }
   virtual void addPredecessor(BasicBlock *bb) { predecessors.push_back(bb); }
   virtual void addSuccessor(BasicBlock *bb) { successors.push_back(bb); }
+
+  std::string getLabel() const {
+    if (instructions.size() == 0) {
+      throw std::runtime_error("BasicBlock has no instructions");
+    }
+    auto instr = instructions[0];
+    if (instr.contains("label")) {
+      /*std::string label = remove_quotes(instr["label"].dump());
+      if(label[0] != '.'){
+        return std::string(".") + label;
+      }*/
+      return instr["label"];
+    } else {
+      throw std::runtime_error("I feel like you should not be asking for a label RN");
+    }
+  }
 
   size_t size() { return instructions.size(); }
 
@@ -84,6 +101,8 @@ public:
   std::vector<BasicBlockDom*> dom_succs;
   BasicBlockDom* idom;
   std::unordered_set<BasicBlockDom*> dfront;
+
+  std::unordered_map<std::string, int> var_to_phi;
 
 };
 

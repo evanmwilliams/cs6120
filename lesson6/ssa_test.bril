@@ -5,9 +5,11 @@
   br eq .changea1 .changea2;
 .changea1:
   a: int = const 5;
+  b: int = const 3;
   jmp .printa;
 .changea2:
   a: int = const 6;
+  b: int = const 1;
   jmp .printa;
 .printa:
   print a;

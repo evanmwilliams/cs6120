@@ -1,5 +1,5 @@
 #pragma once
-#include "find_blocks.cpp"
+#include "find_blocks.hpp"
 #include <memory>
 
 template <typename BB>

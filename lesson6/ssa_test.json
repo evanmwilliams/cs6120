@@ -1,0 +1,91 @@
+{
+  "functions": [
+    {
+      "instrs": [
+        {
+          "dest": "a",
+          "op": "const",
+          "type": "int",
+          "value": 4
+        },
+        {
+          "dest": "b",
+          "op": "const",
+          "type": "int",
+          "value": 2
+        },
+        {
+          "args": [
+            "a",
+            "b"
+          ],
+          "dest": "eq",
+          "op": "eq",
+          "type": "bool"
+        },
+        {
+          "args": [
+            "eq"
+          ],
+          "labels": [
+            "changea1",
+            "changea2"
+          ],
+          "op": "br"
+        },
+        {
+          "label": "changea1"
+        },
+        {
+          "dest": "a",
+          "op": "const",
+          "type": "int",
+          "value": 5
+        },
+        {
+          "dest": "b",
+          "op": "const",
+          "type": "int",
+          "value": 3
+        },
+        {
+          "labels": [
+            "printa"
+          ],
+          "op": "jmp"
+        },
+        {
+          "label": "changea2"
+        },
+        {
+          "dest": "a",
+          "op": "const",
+          "type": "int",
+          "value": 6
+        },
+        {
+          "dest": "b",
+          "op": "const",
+          "type": "int",
+          "value": 1
+        },
+        {
+          "labels": [
+            "printa"
+          ],
+          "op": "jmp"
+        },
+        {
+          "label": "printa"
+        },
+        {
+          "args": [
+            "a"
+          ],
+          "op": "print"
+        }
+      ],
+      "name": "main"
+    }
+  ]
+}
