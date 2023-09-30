@@ -106,6 +106,7 @@ void dominanceFrontierHelper(BasicBlockDom &bb, boost::dynamic_bitset<> &visible
 {
   if (!visible.test(static_cast<size_t>(bb.id)))
   {
+    //std::cout << "POINT1" << std::endl;
     auto &dominance_front = bb.dfront;
 
     // {n' | n ≻ n'}
@@ -115,11 +116,14 @@ void dominanceFrontierHelper(BasicBlockDom &bb, boost::dynamic_bitset<> &visible
       dominance_front.insert(dynamic_cast<BasicBlockDom *>(succ));
     }
     // U_{n idom c} DF[c]
+    //std::cout << "POINT2" << std::endl;
+
     for (auto bb2 : bb.dom_succs)
     {
       dominanceFrontierHelper(*bb2, visible);
       dominance_front.insert(bb2->dfront.begin(), bb2->dfront.end());
     }
+    //std::cout << "POINT3" << std::endl;
 
     // {n' | n dom n'}
     for (auto it = dominance_front.begin(); it != dominance_front.end();)
@@ -134,6 +138,7 @@ void dominanceFrontierHelper(BasicBlockDom &bb, boost::dynamic_bitset<> &visible
         ++it;
       }
     }
+   //std::cout << "POINT4" << std::endl;
 
     visible.set(bb.id);
   }

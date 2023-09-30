@@ -24,7 +24,7 @@ public:
   static int label_number;
 
   BasicBlock() = default;
-  void addInstr(const json &insn) {
+  virtual void addInstr(const json &insn) {
     if (insn.contains("label")) {
       label = insn["label"];
       //std::cout << "Label generated: " << label << std::endl;
@@ -44,9 +44,9 @@ public:
   virtual void addSuccessor(BasicBlock *bb) { successors.push_back(bb); }
 
   std::string getLabel() const {
-    if (instructions.size() == 0) {
+    /*if (instructions.size() == 0) {
       throw std::runtime_error("BasicBlock has no instructions");
-    }
+    }*/
     return label;
   }
 
@@ -150,6 +150,24 @@ public:
 
   std::vector<PhiNode> phi_nodes;
 
+  void addInstr(const json &insn) override {
+    if(insn.contains("op") && insn["op"] == "phi"){
+      std::string dest = insn["dest"];
+      std::string original_name = "";
+      std::vector<std::string> args;
+      std::vector<std::string> labels;
+      for(auto& arg : insn["args"]){
+        args.push_back(arg);
+      }
+      for(auto& label : insn["labels"]){
+        labels.push_back(label);
+      }
+      phi_nodes.push_back(PhiNode(dest, original_name, args, labels));
+      return;
+    }
+    BasicBlock::addInstr(insn);
+  }
+
 };
 
 template <typename BBType>
@@ -162,19 +180,19 @@ std::vector<BBType> find_blocks(json const &func) {
         (instr["op"] == "jmp" or instr["op"] == "br")) {
       current_block.addInstr(instr);
       basic_blocks.push_back(current_block);
-      current_block.clear();
+      current_block = BBType();
     } else if (instr.contains("label")) {
-      if (current_block.size() > 0) {
+      if (current_block.label != "") {
         basic_blocks.push_back(current_block);
       }
-      current_block.clear();
+      current_block = BBType();
       current_block.addInstr(instr);
     } else {
       current_block.addInstr(instr);
     }
   }
 
-  if (current_block.size() > 0) {
+  if (current_block.label != "") {
     basic_blocks.push_back(current_block);
   }
 

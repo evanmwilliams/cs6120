@@ -18,6 +18,9 @@ public:
     if(func.contains("args")){
       function["args"] = func["args"];
     }
+    if(func.contains("type")){
+      function["type"] = func["type"];
+    }
     json instructions = json::array();
     for (auto &bb : bbs) {
       json label{ {"label", bb.getLabel()} };

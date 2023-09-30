@@ -31,60 +31,57 @@ void fromSSA(const json &prog) {
 
   for (const json &func : prog["functions"])
   {
+
     std::vector<BasicBlockDom> bbs = find_blocks<BasicBlockDom>(func);
     CFGVisitor<BasicBlockDom> cfg = CFGVisitor<BasicBlockDom>(bbs);
 
     std::vector<BasicBlockDom> new_phi_bbs;
+    std::vector<BasicBlockDom> ordered_bbs;
+
+    std::unordered_map<std::string, int> label_to_phi_bb;
 
     // in each basic block, look for a phi node
     // if there is a phi node, then we need to insert a new basic block
     // before the current basic block
     for(auto bb_itr = bbs.begin(); bb_itr != bbs.end(); bb_itr++){
       auto& bb = *bb_itr;
-      int newly_added_blocks = 0;
-      std::unordered_map<std::string, int> label_to_phi_bb;
-      for(auto &instruction : bb.instructions){
-        // map of var to existing phi node block assignment predecessor
-
-        if(instruction.contains("op") && instruction["op"] == "phi"){
-          // insert new basic block
-          auto dest = instruction["dest"];
+      //std::cout << "***** RESETTING LABEL TO PHI BB *******" << std::endl;
+      for(auto &phi_node : bb.phi_nodes){
+          //std::cout << "working on phi node: " << phi_node.toInstruction() << std::endl;
+          auto dest = phi_node.dest;
           // for each of the phi args
-          for(int i = 0; i < instruction["args"].size(); i++){
-            //std::cout << "NEW BB TIME" <<std::endl;
-            auto arg = instruction["args"][i];
-            auto from_label = instruction["labels"][i];
-            // std::cout << "Looking for PHI BB for " << from_label << std::endl;
+          for(int i = 0; i < phi_node.args.size(); i++){
+            auto arg = phi_node.args[i];
+            auto from_label = phi_node.labels[i];
 
-            // // print out label_to_phi_bb
-            // for(auto &[label, bb] : label_to_phi_bb){
-            //   std::cout << label << " -> " << bb << std::endl;
-            // } 
-
+            //std::cout << "Looking for phi bb for label: " << from_label << std::endl;
             if(label_to_phi_bb.count(from_label) > 0){
-              //std::cout << "Found a block to add to!" << std::endl;
+              //std::cout << "Found existing phi bb for label: " << from_label << std::endl;
               json id_insn = {
                 {"dest", dest},
                 {"op", "id"},
                 {"args", json::array({arg})}
               };
-              auto& phi_bb = new_phi_bbs[label_to_phi_bb[from_label]];
+              auto phi_bb = ordered_bbs[label_to_phi_bb[from_label]];
               auto jmp = phi_bb.instructions.back();
               phi_bb.instructions.pop_back();
               phi_bb.instructions.push_back(id_insn);
               phi_bb.instructions.push_back(jmp);
+
+              ordered_bbs[label_to_phi_bb[from_label]] = phi_bb;
               //swap last insn with jump
               //std::cout << "Added to block " << from_label << std::endl;
               continue;
             }
 
             BasicBlockDom new_bb;
-            std::string new_bb_label = "_" + std::to_string(i) + remove_quotes(from_label.dump());
+            std::string new_bb_label = "_" + std::to_string(i) + from_label;
 
             json bb_label = {
               {"label", new_bb_label}
             };
-            new_bb.instructions.push_back(bb_label);
+            new_bb.addInstr(bb_label);
+            //std::cout << "CREATED NEW PHI BB WITH LABEL: " << new_bb.getLabel () << std::endl;
             json id_insn = {
               {"dest", dest},
               {"op", "id"},
@@ -92,12 +89,12 @@ void fromSSA(const json &prog) {
             };
 
             //std::cout << "id_insn: " << id_insn << "\n";
-            new_bb.instructions.push_back(id_insn);
+            new_bb.addInstr(id_insn);
             json jmp_insn = {
               {"op", "jmp"},
               {"labels", json::array({bb.getLabel()})}
             };
-            new_bb.instructions.push_back(jmp_insn);
+            new_bb.addInstr(jmp_insn);
 
             // look through the predecessors for a match, to jump to the new bb
             for(auto& pred : bb.predecessors){
@@ -107,36 +104,52 @@ void fromSSA(const json &prog) {
                   {"labels", json::array({new_bb_label})}
                 };
                 // replace last jump or add it
-                if(pred->getLastInstruction()["op"] == "jmp"){
+                if(pred->instructions.size() > 0 && pred->getLastInstruction()["op"] == "jmp"){
                   pred->instructions.pop_back();
+                  pred->addInstr(pred_jmp_insn);
+                } else if(pred->instructions.size() > 0 && pred->getLastInstruction()["op"] == "br"){
+                  auto br_insn = pred->instructions.back();
+                  pred->instructions.pop_back();
+                  for(auto& label : br_insn["labels"]){
+                    if(label == bb.getLabel()){
+                      label = new_bb_label;
+                    }
+                  }
+                  pred->addInstr(br_insn);
+                } else {
+                  pred->addInstr(pred_jmp_insn);
                 }
-                pred->instructions.push_back(pred_jmp_insn);
-                pred->successors.push_back(&new_bb);
-                new_bb.predecessors.push_back(pred);
+                
+                //also update this pred_bb in ordered_bbs
+                for(int i = 0; i < ordered_bbs.size(); i++){
+                  if(ordered_bbs[i].getLabel() == pred->getLabel()){
+                    ordered_bbs[i] = *dynamic_cast<BasicBlockDom* >(pred);
+                    break;
+                  }
+                }
                 break;
               }
             }
 
+            //with reordering
             new_phi_bbs.push_back(new_bb);
-            label_to_phi_bb[from_label] = new_phi_bbs.size()-1;
-            
-            //bb_itr = bbs.insert(bb_itr, new_bb);
-            //newly_added_blocks++;
-            //std::cout << "Finished a phi arg " << std::endl;
+
+            // no reordering
+            ordered_bbs.push_back(new_bb);
+            //label_to_phi_bb[from_label] = new_phi_bbs.size()-1;
+            label_to_phi_bb[from_label] = ordered_bbs.size()-1;
           }
-        }
+        
       }
       // remove phi nodes from this block
-      bb.instructions.erase(std::remove_if(bb.instructions.begin(), bb.instructions.end(), [](auto& insn){
-        return insn.contains("op") && insn["op"] == "phi";
-      }), bb.instructions.end());
-      //bb_itr+=newly_added_blocks+1;
+      bb.phi_nodes.clear();
+      ordered_bbs.push_back(bb);
 
     }
 
-    interleavePhiBBs(bbs, new_phi_bbs);
-    //bbs.insert(bbs.end(), new_phi_bbs.begin(), new_phi_bbs.end());
-    printer.printFunction(func, bbs);
+    //interleavePhiBBs(bbs, new_phi_bbs);
+    //printer.printFunction(func, bbs);
+    printer.printFunction(func, ordered_bbs);
   }
   printer.print();
 

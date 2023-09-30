@@ -118,9 +118,7 @@ void rename(BasicBlockDom& bb,
   for(auto &instr : bb.instructions){
     if(instr.contains("args") && instr.contains("op") && instr["op"] != "phi"){
       for(auto &arg : instr["args"]){
-        //std::cout << "try to arg GET " << arg << std::endl;
         arg = variable_names[remove_quotes(arg.dump())].top().toVariable();
-        //std::cout << "try to arg sad" << std::endl;
 
       }
     }
@@ -142,8 +140,6 @@ void rename(BasicBlockDom& bb,
       instr["dest"] = variable_names[dest].top().toVariable();
     }
   }
-
-
   //std::cout << "did renaming " << std::endl;
 
   for(auto& succ : bb.successors){
@@ -151,31 +147,6 @@ void rename(BasicBlockDom& bb,
       phi.updatePhiArg(variable_names[phi.original_name].top().toVariable(), bb.getLabel());
     }
   }
-
-  /*for(auto& succ : bb.successors){
-    for(auto &phi : (*succ).instructions){
-      if(phi.contains("op") && phi["op"] == "phi"){
-        
-        // loop phi = a, a, a
-        // for the first "a", change it to "a1"
-        // then BREAK
-        for(int arg_int = 0; arg_int < phi["args"].size(); arg_int++){
-          auto arg = remove_quotes(phi["args"][arg_int].dump());
-
-          if(variable_names.count(arg) > 0){
-            arg = variable_names[arg].top().toVariable();
-            phi["args"][arg_int] = arg;
-            //std::cout << "GET LABEL" << std::endl;
-            phi["labels"][arg_int] = bb.getLabel();
-            //std::cout << "GOT LABEL: " << bb.getLabel() << std::endl;
-
-            break;
-          }
-        }
-        //std::cout << "RESULTING RENAMED PHI: " << phi << std::endl;
-      }
-    }
-  }*/
   // std::cout << "did succs, Now needs to RENAME " << bb.dom_succs.size() << " DOMSUCC BLOCKS" << std::endl;
   for(auto succ : bb.dom_succs){
     rename(*succ, variable_names);
@@ -200,7 +171,7 @@ void toSSA(const json &prog){
     std::vector<BasicBlockDom> bbs = find_blocks<BasicBlockDom>(func);
 
     CFGVisitor<BasicBlockDom> cfg = CFGVisitor<BasicBlockDom>(bbs);
-    // std::cout << "CFG??" << std::endl;
+    //std::cout << "CFG??" << std::endl;
 
     insert_phi_nodes(bbs, cfg);
     /*for (auto bb : bbs)
@@ -239,9 +210,10 @@ void toSSA(const json &prog){
     }*/
     printer.printFunction(func, bbs);
     PhiVariable::clearHighestVars();
-    printer.print();
 
   }
+  printer.print();
+
 
 }
 
@@ -250,7 +222,7 @@ std::unordered_map<std::string, int> PhiVariable::highest_num;
 int main(int argc, char *argv[])
 {
   const json prog = cli_parse_program(argc, argv);
-
+  //std::cout << "to SSA" << std::endl;
   toSSA(prog);
   
   return EXIT_SUCCESS;

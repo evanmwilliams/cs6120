@@ -10,14 +10,16 @@ pipeline = [
 [runs.to_ssa]
 pipeline = [
     "bril2json",
-    "./ssa",
+    "./bril-opts --ssa",
+    "bril2json",
     "brili -p {args}",
 ]
 
 [runs.to_from_ssa]
 pipeline = [
     "bril2json",
-    "./ssa",
+    "./bril-opts --ssa",
+    "bril2json",
     "./from_ssa",
     "brili -p {args}",
 ]
